@@ -30,9 +30,20 @@ moves 0.918 → 0.918: a monotonic rescale reorders nothing, which is the proof
 that the units were wrong rather than the decisions.
 
 **This is not an argument against the model.** AUC 0.91 means it genuinely
-understands the task, and TypeSafe's own docs tell you to validate calibration
-on your own data. As a high-recall pre-filter (recall 0.74) with a calibration
-layer on top, it works. As `if p > 0.9`, it doesn't do what it looks like it does.
+understands the task. TypeSafe's blog says *"Calibrated: higher confidence means
+higher accuracy"* — and that sentence is **true** here: the rank correlation
+between stated confidence and actual flag rate is 0.96. What's false is what
+engineers read into the word "calibrated", that 0.9 is a probability you can
+threshold against. Their docs also say *"Start with conservative thresholds,
+test with your own data, and adjust as you observe results."* This is what that
+looks like when you actually do it.
+
+As a high-recall pre-filter (recall 0.74) with a calibration layer on top, it
+works. As `if p > 0.9`, it doesn't do what it looks like it does.
+
+**The fix, as a tool:** [`jevcal`](https://github.com/Adilmp/jevcal) runs this
+check against your own labelled data and learns the correction. ~100 labelled
+rows, single file, numpy only.
 
 ---
 

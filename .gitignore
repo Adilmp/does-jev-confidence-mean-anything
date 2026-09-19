@@ -15,3 +15,7 @@ data/
 # Simulated output is fake data for testing the plumbing. Committing it would
 # put invented numbers in the repo next to real ones.
 results/*SIMULATED*
+POST.md
+POST_v2.md
+__pycache__/
+*.pyc

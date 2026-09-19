@@ -96,8 +96,10 @@
 <h2>The result</h2>
 <p><a href="https://docs.typesafe.ai">Jev</a> doesn't generate text. You hand it
    state, it hands back a typed probability. That makes the probability the
-   entire product — and TypeSafe's own docs tell you to validate calibration on
-   your own data without publishing any.</p>
+   entire product. TypeSafe's docs say <em>&ldquo;Start with conservative
+   thresholds, test with your own data, and adjust as you observe results.&rdquo;</em>
+   This is what that looks like when you actually do it &mdash; and the
+   <a href="https://github.com/Adilmp/jevcal">tool that does it for you</a>.</p>
 
 <figure>
   <img src="results/natural_strict_calibration.png" alt="Reliability diagram: every confidence band falls below the perfect-calibration diagonal.">
