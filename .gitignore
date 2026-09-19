@@ -1,0 +1,17 @@
+# Secrets
+.env
+__pycache__/
+
+# Downloaded dataset slices. Not committed: they are civil_comments content,
+# and step 1 is seeded (SEED = 7), so `python3 1_get_data.py` reproduces the
+# exact same natural.csv and hard.csv byte for byte.
+data/
+
+# results/ IS committed on purpose. The charts and summary tables are the
+# point of the repo, the README embeds one of them, and the raw JSONL lets
+# anyone re-derive every number without an API key or spending anything.
+# Total is ~2MB once the simulated files below are excluded.
+
+# Simulated output is fake data for testing the plumbing. Committing it would
+# put invented numbers in the repo next to real ones.
+results/*SIMULATED*
