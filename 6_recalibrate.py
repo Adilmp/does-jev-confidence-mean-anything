@@ -44,6 +44,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.lines import Line2D
 
 measure = import_module("3_measure")
 chart = import_module("4_chart")
@@ -151,44 +152,102 @@ def scored(df, p):
     return measure.summarise(part), measure.buckets(part)
 
 
+def _solid_runs(mask):
+    """Split a boolean mask into runs of consecutive True indices.
+
+    Used so the curve is only drawn through bands that have enough judgments
+    behind them. Connecting across a thin band draws a bold line through a
+    number that is mostly noise, which is exactly the thing this chart exists
+    to argue against.
+    """
+    runs, current = [], []
+    for i, keep in enumerate(mask):
+        if keep:
+            current.append(i)
+        elif current:
+            runs.append(current)
+            current = []
+    if current:
+        runs.append(current)
+    return runs
+
+
 def plot(before_tbl, after_tbl, stats_b, stats_a, name):
-    fig, ax = plt.subplots(figsize=(8.0, 7.4), dpi=200)
+    fig = plt.figure(figsize=(8.0, 8.6), dpi=200)
+    gs = fig.add_gridspec(2, 1, height_ratios=[3.5, 1], hspace=0.34)
+    ax, axc = fig.add_subplot(gs[0]), fig.add_subplot(gs[1])
+
     ax.plot([0, 1], [0, 1], color=chart.MUTED, linewidth=1.2, zorder=1)
 
+    thin_any = False
     for tbl, colour, label in (
         (before_tbl, BEFORE, f"Jev as shipped · ECE {stats_b['ECE']:.3f}"),
         (after_tbl, AFTER, f"after recalibration · ECE {stats_a['ECE']:.3f}"),
     ):
         x, y = tbl["jev_said"].to_numpy(), tbl["actually_was"].to_numpy()
-        ax.plot(x, y, color=colour, linewidth=2, zorder=3, label=label)
-
-        # Hollow = too few judgments in that band to mean anything. The held-out
-        # half is only ~800 rows, so the top bands get thin and a sharp kink up
-        # there is sampling noise, not a real wobble in the calibration.
         solid = (tbl["n"] >= chart.MIN_N).to_numpy()
+        thin_any = thin_any or (~solid).any()
+
+        # Draw the line only across bands thick enough to mean something, and
+        # break it where the data thins out rather than bridging the gap.
+        first = True
+        for run in _solid_runs(solid):
+            ax.plot(x[run], y[run], color=colour, linewidth=2, zorder=3,
+                    label=label if first else None)
+            first = False
+        if first:  # every band was thin; keep the legend entry alive
+            ax.plot([], [], color=colour, linewidth=2, label=label)
+
         ax.plot(x[solid], y[solid], "o", markersize=8, color=colour,
                 markeredgecolor=chart.SURFACE, markeredgewidth=2,
                 linestyle="none", zorder=4)
-        ax.plot(x[~solid], y[~solid], "o", markersize=7, color=chart.SURFACE,
-                markeredgecolor=colour, markeredgewidth=1.6,
+        # Hollow, unconnected: too few judgments in that band to read.
+        ax.plot(x[~solid], y[~solid], "o", markersize=6.5, color=chart.SURFACE,
+                markeredgecolor=colour, markeredgewidth=1.4, alpha=0.75,
                 linestyle="none", zorder=4)
 
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.set_aspect("equal")
-    ax.set_xlabel("Stated confidence", fontsize=10, labelpad=9)
     ax.set_ylabel("How often humans actually flagged it", fontsize=10, labelpad=9)
-    leg = ax.legend(loc="upper left", frameon=False, fontsize=9)
+    ax.tick_params(labelbottom=False)
+    handles, labels = ax.get_legend_handles_labels()
+    if thin_any:
+        handles.append(Line2D([], [], marker="o", linestyle="none",
+                              markersize=6.5, color=chart.SURFACE,
+                              markeredgecolor=chart.MUTED, markeredgewidth=1.4))
+        labels.append(f"fewer than {chart.MIN_N} judgments — not readable")
+    leg = ax.legend(handles, labels, loc="upper left", frameon=False, fontsize=9)
     for text in leg.get_texts():
         text.set_color(chart.INK_2)
     chart.style(ax)
 
+    # Counts strip. Without it the eye weights a band of 3 the same as a band
+    # of 750, and the reason the corrected ECE is low - almost everything
+    # lands in the first band - is invisible.
+    width = 0.042
+    for tbl, colour, off in ((before_tbl, BEFORE, -width / 2),
+                             (after_tbl, AFTER, +width / 2)):
+        centres = [(float(b.split("-")[0]) + float(b.split("-")[1])) / 2
+                   for b in tbl["bucket"]]
+        axc.bar([c + off for c in centres], tbl["n"], width=width,
+                color=colour, alpha=0.55, edgecolor=chart.SURFACE, linewidth=0.8)
+    axc.set_xlim(0, 1)
+    axc.set_xlabel("Stated confidence", fontsize=10, labelpad=9)
+    axc.set_ylabel("judgments\nin this band", fontsize=9, labelpad=9)
+    chart.style(axc)
+
     fig.suptitle("The ranking was fine. The numbers needed rescaling.",
-                 fontsize=15, color=chart.INK, x=0.055, ha="left", y=1.0)
+                 fontsize=15, color=chart.INK, x=0.055, ha="left", y=0.985)
     fig.text(0.055, 0.945,
              f"Held-out half, never seen during fitting · AUC {stats_b['AUC']:.3f} "
              f"-> {stats_a['AUC']:.3f} (unchanged: recalibration reorders nothing)",
              fontsize=9.5, color=chart.INK_2, ha="left")
+    fig.text(0.055, 0.018,
+             "Recalibration pushes almost every judgment into the lowest band, "
+             "which is what a 2.9% base rate\nactually looks like. The gain is "
+             "real but Brier, not ECE, is the number that shows it.",
+             fontsize=8, color=chart.MUTED, ha="left")
 
     out = f"results/{name}_recalibrated.png"
     fig.savefig(out, bbox_inches="tight", facecolor=chart.SURFACE, pad_inches=0.42)

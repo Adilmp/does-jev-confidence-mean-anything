@@ -3,7 +3,7 @@
 An audit of the probabilities returned by [TypeSafe's Jev](https://docs.typesafe.ai),
 measured against human annotations rather than another model's opinion.
 
-**8,000 judgments · 3 wording conditions · 2 base rates · `jev-1.13.0` · $0.05**
+**8,000 judgments · 4 wordings · 2 base rates · `jev-1.13.0` · $0.05**
 
 ---
 

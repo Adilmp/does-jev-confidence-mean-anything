@@ -183,7 +183,7 @@ def build():
                  "and records what fraction flagged it. A toxicity of 0.7 means "
                  "7 in 10 real people agreed.",
             bullets=["8,000 judgments across two base rates",
-                     "Three wording conditions",
+                     "Four wordings, tested head to head",
                      "One pinned model version (jev-1.13.0)"],
             accent="Total cost of the entire study: five cents."),
 
